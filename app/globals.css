@@ -1,0 +1,233 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Dark theme (default) - VidIQ style */
+    --background: 0 0 0; /* Pure black #000000 */
+    --foreground: 255 255 255; /* Pure white #FFFFFF */
+    --card: 26 26 26; /* Dark gray #1A1A1A */
+    --card-foreground: 255 255 255;
+    --popover: 26 26 26;
+    --popover-foreground: 255 255 255;
+    --primary: 0 123 255; /* VidIQ blue #007BFF */
+    --primary-foreground: 255 255 255;
+    --secondary: 0 123 255;
+    --secondary-foreground: 255 255 255;
+    --muted: 26 26 26;
+    --muted-foreground: 156 163 175; /* Light gray for secondary text */
+    --accent: 0 123 255;
+    --accent-foreground: 255 255 255;
+    --destructive: 239 68 68; /* Red for errors */
+    --destructive-foreground: 255 255 255;
+    --border: 55 65 81; /* Dark border */
+    --input: 26 26 26;
+    --ring: 0 123 255;
+    --radius: 0.5rem;
+    --chart-1: 0 123 255;
+    --chart-2: 0 86 179;
+    --chart-3: 239 68 68;
+    --chart-4: 34 197 94;
+    --chart-5: 245 158 11;
+  }
+
+  .light {
+    /* Light theme */
+    --background: 255 255 255;
+    --foreground: 0 0 0;
+    --card: 255 255 255;
+    --card-foreground: 0 0 0;
+    --popover: 255 255 255;
+    --popover-foreground: 0 0 0;
+    --primary: 0 123 255;
+    --primary-foreground: 255 255 255;
+    --secondary: 0 123 255;
+    --secondary-foreground: 255 255 255;
+    --muted: 243 244 246;
+    --muted-foreground: 107 114 128;
+    --accent: 0 123 255;
+    --accent-foreground: 255 255 255;
+    --destructive: 239 68 68;
+    --destructive-foreground: 255 255 255;
+    --border: 229 231 235;
+    --input: 243 244 246;
+    --ring: 0 123 255;
+    --chart-1: 0 123 255;
+    --chart-2: 0 86 179;
+    --chart-3: 239 68 68;
+    --chart-4: 34 197 94;
+    --chart-5: 245 158 11;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-background;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-muted rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-primary/50;
+}
+
+/* Enhanced hover effects */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(0, 123, 255, 0.2);
+}
+
+/* Glowing effects */
+.glow-text {
+  text-shadow: 0 0 20px rgba(0, 123, 255, 0.5);
+}
+
+.glow-button {
+  box-shadow: 0 0 20px rgba(0, 123, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.glow-button:hover {
+  box-shadow: 0 0 30px rgba(0, 123, 255, 0.6);
+}
+
+.glow-card {
+  box-shadow: 0 0 30px rgba(0, 123, 255, 0.1);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(0, 123, 255, 0.6);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.8s ease-out;
+}
+
+.animate-fade-in-up {
+  animation: fadeIn 0.8s ease-out;
+}
+
+.animate-fade-in-up.delay-100 {
+  animation-delay: 0.1s;
+  opacity: 0;
+  animation-fill-mode: forwards;
+}
+
+.animate-fade-in-up.delay-200 {
+  animation-delay: 0.2s;
+  opacity: 0;
+  animation-fill-mode: forwards;
+}
+
+.animate-fade-in-up.delay-300 {
+  animation-delay: 0.3s;
+  opacity: 0;
+  animation-fill-mode: forwards;
+}
+
+.animate-fade-in-up.delay-400 {
+  animation-delay: 0.4s;
+  opacity: 0;
+  animation-fill-mode: forwards;
+}
+
+.animate-fade-in-up.delay-500 {
+  animation-delay: 0.5s;
+  opacity: 0;
+  animation-fill-mode: forwards;
+}
+
+.animate-slide-in-left {
+  animation: slideInLeft 0.8s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.8s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.8s ease-out;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .hover-lift:hover {
+    transform: translateY(-4px);
+  }
+}
