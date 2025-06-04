@@ -11,10 +11,10 @@ export async function GET() {
 
     const adminUser = await prisma.user.findUnique({
       where: { email: user.email },
-      select: { role: true }
+      include: { role: true }
     });
 
-    if (adminUser?.role !== 'admin') {
+    if (!adminUser?.role || adminUser.role.name !== 'ADMIN') {
       return new NextResponse('Forbidden', { status: 403 });
     }
 

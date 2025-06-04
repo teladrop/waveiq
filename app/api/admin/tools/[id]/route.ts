@@ -14,10 +14,10 @@ export async function PATCH(
 
     const adminUser = await prisma.user.findUnique({
       where: { email: user.email },
-      select: { role: true }
+      include: { role: true }
     });
 
-    if (adminUser?.role !== 'admin') {
+    if (!adminUser?.role || adminUser.role.name !== 'ADMIN') {
       return new NextResponse('Forbidden', { status: 403 });
     }
 
@@ -53,10 +53,10 @@ export async function DELETE(
 
     const adminUser = await prisma.user.findUnique({
       where: { email: user.email },
-      select: { role: true }
+      include: { role: true }
     });
 
-    if (adminUser?.role !== 'admin') {
+    if (!adminUser?.role || adminUser.role.name !== 'ADMIN') {
       return new NextResponse('Forbidden', { status: 403 });
     }
 
