@@ -8,7 +8,7 @@ import { Search, Zap, Target, BarChart3, TrendingUp, Clock, Eye, Video, Users, U
 import Link from "next/link"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 import { Activity, TrendingTopic, UserStats, getRecentActivities, getTrendingTopics, getUserStats, formatNumber, formatTimeAgo } from '@/lib/data-service';
-import { auth } from '@/lib/firebase';
+import { useAuth } from '@/lib/auth';
 import { useRouter } from 'next/navigation';
 
 const trendData = [
@@ -87,6 +87,7 @@ const trendingTopics = [
 ]
 
 export default function DashboardPage() {
+  const { user, loading: authLoading } = useAuth();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
   const [userStats, setUserStats] = useState<UserStats | null>(null);
@@ -96,16 +97,15 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const user = auth.currentUser;
         if (!user) {
           router.push('/login');
           return;
         }
 
         const [activitiesData, topicsData, statsData] = await Promise.all([
-          getRecentActivities(user.uid),
+          getRecentActivities(user.id),
           getTrendingTopics(),
-          getUserStats(user.uid)
+          getUserStats(user.id)
         ]);
 
         setActivities(activitiesData);
@@ -119,7 +119,7 @@ export default function DashboardPage() {
     };
 
     fetchData();
-  }, [router]);
+  }, [user, router]);
 
   const getActivityIcon = (type: Activity['type']) => {
     switch (type) {
