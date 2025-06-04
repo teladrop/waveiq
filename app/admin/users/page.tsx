@@ -14,10 +14,10 @@ interface User {
   id: string;
   email: string;
   role: string;
-  subscription: {
+  subscriptions: {
     status: string;
     plan: string;
-  } | null;
+  }[];
 }
 
 export default function AdminUsersPage() {
@@ -125,10 +125,10 @@ export default function AdminUsersPage() {
                 <div className="space-y-2">
                   <Label>Subscription</Label>
                   <div className="text-sm text-gray-600">
-                    {user.subscription ? (
+                    {user.subscriptions && user.subscriptions.length > 0 ? (
                       <>
-                        <p>Status: {user.subscription.status}</p>
-                        <p>Plan: {user.subscription.plan}</p>
+                        <p>Status: {user.subscriptions[0].status}</p>
+                        <p>Plan: {user.subscriptions[0].plan}</p>
                       </>
                     ) : (
                       <p>No active subscription</p>

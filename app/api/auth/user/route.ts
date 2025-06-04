@@ -16,7 +16,7 @@ export async function GET() {
         email: true,
         name: true,
         role: true,
-        subscription: {
+        subscriptions: {
           select: {
             status: true,
             plan: true
