@@ -21,7 +21,7 @@ export async function GET() {
     const users = await prisma.user.findMany({
       include: {
         role: true,
-        subscription: {
+        subscriptions: {
           select: {
             status: true,
             plan: true
