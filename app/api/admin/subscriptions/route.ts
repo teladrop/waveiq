@@ -69,10 +69,10 @@ export async function POST(request: Request) {
 
     const adminUser = await prisma.user.findUnique({
       where: { email: user.email },
-      select: { role: true }
+      include: { role: true }
     });
 
-    if (adminUser?.role !== 'admin') {
+    if (!adminUser?.role || adminUser.role.name !== 'ADMIN') {
       return new NextResponse('Forbidden', { status: 403 });
     }
 
@@ -89,7 +89,7 @@ export async function POST(request: Request) {
         plan,
         status,
         startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null
+        endDate: endDate ? new Date(endDate) : new Date(startDate + 30 * 24 * 60 * 60 * 1000) // Default to 30 days if not provided
       }
     });
 
