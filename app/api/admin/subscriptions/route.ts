@@ -1,36 +1,49 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
+import { getCurrentUser } from '@/lib/auth-server';
+
+interface Subscription {
+  id: string;
+  userId: string;
+  plan: string;
+  status: string;
+  startDate: Date;
+  endDate: Date;
+  user: {
+    email: string;
+  };
+}
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    const user = await getCurrentUser();
+    if (!user?.email) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+    const adminUser = await prisma.user.findUnique({
+      where: { email: user.email },
       select: { role: true }
     });
 
-    if (user?.role !== 'admin') {
+    if (adminUser?.role !== 'admin') {
       return new NextResponse('Forbidden', { status: 403 });
     }
 
     const subscriptions = await prisma.subscription.findMany({
+      orderBy: {
+        startDate: 'desc'
+      },
       include: {
         user: {
           select: {
             email: true
           }
         }
-      },
-      orderBy: { startDate: 'desc' }
+      }
     });
 
-    const formattedSubscriptions = subscriptions.map(sub => ({
+    const formattedSubscriptions = subscriptions.map((sub: Subscription) => ({
       id: sub.id,
       userId: sub.userId,
       userEmail: sub.user.email,
@@ -50,14 +63,23 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const user = await getCurrentUser();
-    if (!user) {
+    if (!user?.email) {
       return new NextResponse('Unauthorized', { status: 401 });
+    }
+
+    const adminUser = await prisma.user.findUnique({
+      where: { email: user.email },
+      select: { role: true }
+    });
+
+    if (adminUser?.role !== 'admin') {
+      return new NextResponse('Forbidden', { status: 403 });
     }
 
     const body = await request.json();
     const { userId, plan, status, startDate, endDate } = body;
 
-    if (!userId || !plan || !status || !startDate || !endDate) {
+    if (!userId || !plan || !status || !startDate) {
       return new NextResponse('Missing required fields', { status: 400 });
     }
 
@@ -67,17 +89,8 @@ export async function POST(request: Request) {
         plan,
         status,
         startDate: new Date(startDate),
-        endDate: new Date(endDate),
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
+        endDate: endDate ? new Date(endDate) : null
+      }
     });
 
     return NextResponse.json(subscription);
