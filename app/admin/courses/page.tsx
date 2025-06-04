@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, getDocs, addDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -13,10 +11,10 @@ import { toast } from 'sonner';
 interface Course {
   id: string;
   title: string;
-  video_link: string;
+  videoLink: string;
   description: string;
   category: string;
-  created_at: string;
+  createdAt: string;
 }
 
 export default function CoursesManagement() {
@@ -27,7 +25,7 @@ export default function CoursesManagement() {
   const [isAddingCourse, setIsAddingCourse] = useState(false);
   const [newCourse, setNewCourse] = useState({
     title: '',
-    video_link: '',
+    videoLink: '',
     description: '',
     category: '',
   });
@@ -38,16 +36,10 @@ export default function CoursesManagement() {
 
   const fetchCourses = async () => {
     try {
-      const coursesRef = collection(db, 'courses');
-      const q = query(coursesRef, orderBy('created_at', 'desc'));
-      const querySnapshot = await getDocs(q);
-      
-      const coursesData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Course[];
-
-      setCourses(coursesData);
+      const response = await fetch('/api/admin/courses');
+      if (!response.ok) throw new Error('Failed to fetch courses');
+      const data = await response.json();
+      setCourses(data);
     } catch (error) {
       console.error('Error fetching courses:', error);
       toast.error('Failed to fetch courses');
@@ -59,17 +51,21 @@ export default function CoursesManagement() {
   const handleAddCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const coursesRef = collection(db, 'courses');
-      await addDoc(coursesRef, {
-        ...newCourse,
-        created_at: new Date().toISOString()
+      const response = await fetch('/api/admin/courses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newCourse),
       });
+
+      if (!response.ok) throw new Error('Failed to add course');
 
       await fetchCourses();
       setIsAddingCourse(false);
       setNewCourse({
         title: '',
-        video_link: '',
+        videoLink: '',
         description: '',
         category: '',
       });
@@ -84,8 +80,11 @@ export default function CoursesManagement() {
     if (!confirm('Are you sure you want to delete this course?')) return;
 
     try {
-      const courseRef = doc(db, 'courses', courseId);
-      await deleteDoc(courseRef);
+      const response = await fetch(`/api/admin/courses/${courseId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) throw new Error('Failed to delete course');
 
       setCourses(courses.filter(course => course.id !== courseId));
       toast.success('Course deleted successfully');
@@ -162,8 +161,8 @@ export default function CoursesManagement() {
             <div>
               <label className="block text-sm font-medium mb-2">Video Link</label>
               <Input
-                value={newCourse.video_link}
-                onChange={(e) => setNewCourse({ ...newCourse, video_link: e.target.value })}
+                value={newCourse.videoLink}
+                onChange={(e) => setNewCourse({ ...newCourse, videoLink: e.target.value })}
                 placeholder="YouTube video URL"
                 required
               />
@@ -208,51 +207,40 @@ export default function CoursesManagement() {
         </Card>
       )}
 
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left p-4">Title</th>
-                <th className="text-left p-4">Category</th>
-                <th className="text-left p-4">Video Link</th>
-                <th className="text-left p-4">Created</th>
-                <th className="text-left p-4">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredCourses.map((course) => (
-                <tr key={course.id} className="border-b">
-                  <td className="p-4">{course.title}</td>
-                  <td className="p-4">{course.category}</td>
-                  <td className="p-4">
-                    <a
-                      href={course.video_link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline"
-                    >
-                      View Video
-                    </a>
-                  </td>
-                  <td className="p-4">
-                    {new Date(course.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="p-4">
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteCourse(course.id)}
-                    >
-                      Delete
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {filteredCourses.map((course) => (
+          <Card key={course.id} className="p-4">
+            <div className="space-y-2">
+              <h3 className="font-semibold">{course.title}</h3>
+              <p className="text-sm text-muted-foreground">{course.description}</p>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="px-2 py-1 bg-secondary rounded-full">
+                  {course.category}
+                </span>
+                <span className="text-muted-foreground">
+                  {new Date(course.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+              <div className="flex gap-2 mt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(course.videoLink, '_blank')}
+                >
+                  View Video
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => handleDeleteCourse(course.id)}
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 } 
