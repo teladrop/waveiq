@@ -1,12 +1,18 @@
 import { PrismaClient } from '@prisma/client';
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
+const prismaClientSingleton = () => {
+  return new PrismaClient();
 };
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+declare global {
+  var prisma: undefined | ReturnType<typeof prismaClientSingleton>;
+}
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+export const prisma = globalThis.prisma ?? prismaClientSingleton();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalThis.prisma = prisma;
+}
 
 // User-specific operations
 export async function getUser(userId: string) {
@@ -27,7 +33,9 @@ export async function getAdmin(adminId: string) {
   return prisma.user.findFirst({
     where: { 
       id: adminId,
-      role: 'ADMIN'
+      role: {
+        name: 'ADMIN'
+      }
     }
   });
 }

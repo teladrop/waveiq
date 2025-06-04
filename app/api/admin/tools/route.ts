@@ -11,15 +11,17 @@ export async function GET() {
 
     const adminUser = await prisma.user.findUnique({
       where: { email: user.email },
-      select: { role: true }
+      include: { role: true }
     });
 
-    if (adminUser?.role !== 'admin') {
+    if (!adminUser?.role || adminUser.role.name !== 'ADMIN') {
       return new NextResponse('Forbidden', { status: 403 });
     }
 
     const tools = await prisma.tool.findMany({
-      orderBy: { name: 'asc' }
+      orderBy: {
+        createdAt: 'desc'
+      }
     });
 
     return NextResponse.json(tools);
@@ -38,18 +40,18 @@ export async function POST(request: Request) {
 
     const adminUser = await prisma.user.findUnique({
       where: { email: user.email },
-      select: { role: true }
+      include: { role: true }
     });
 
-    if (adminUser?.role !== 'admin') {
+    if (!adminUser?.role || adminUser.role.name !== 'ADMIN') {
       return new NextResponse('Forbidden', { status: 403 });
     }
 
     const body = await request.json();
-    const { name, description, apiKey, enabled } = body;
+    const { name, description, apiKey } = body;
 
-    if (!name || !description) {
-      return new NextResponse('Missing required fields', { status: 400 });
+    if (!name) {
+      return new NextResponse('Name is required', { status: 400 });
     }
 
     const tool = await prisma.tool.create({
@@ -57,7 +59,7 @@ export async function POST(request: Request) {
         name,
         description,
         apiKey,
-        enabled: enabled ?? true
+        enabled: true
       }
     });
 
