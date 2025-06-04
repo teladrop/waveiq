@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -19,7 +17,7 @@ interface Role {
     manage_roles: boolean;
     view_analytics: boolean;
   };
-  created_at: string;
+  createdAt: string;
 }
 
 export default function RolesManagement() {
@@ -44,16 +42,10 @@ export default function RolesManagement() {
 
   const fetchRoles = async () => {
     try {
-      const rolesRef = collection(db, 'roles');
-      const q = query(rolesRef, orderBy('created_at', 'desc'));
-      const querySnapshot = await getDocs(q);
-      
-      const rolesData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Role[];
-
-      setRoles(rolesData);
+      const response = await fetch('/api/admin/roles');
+      if (!response.ok) throw new Error('Failed to fetch roles');
+      const data = await response.json();
+      setRoles(data);
     } catch (error) {
       console.error('Error fetching roles:', error);
       toast.error('Failed to fetch roles');
@@ -65,11 +57,15 @@ export default function RolesManagement() {
   const handleAddRole = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const rolesRef = collection(db, 'roles');
-      await addDoc(rolesRef, {
-        ...newRole,
-        created_at: new Date().toISOString()
+      const response = await fetch('/api/admin/roles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newRole),
       });
+
+      if (!response.ok) throw new Error('Failed to add role');
 
       await fetchRoles();
       setIsAddingRole(false);
@@ -92,8 +88,15 @@ export default function RolesManagement() {
 
   const handleUpdatePermissions = async (roleId: string, permissions: Role['permissions']) => {
     try {
-      const roleRef = doc(db, 'roles', roleId);
-      await updateDoc(roleRef, { permissions });
+      const response = await fetch(`/api/admin/roles/${roleId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ permissions }),
+      });
+
+      if (!response.ok) throw new Error('Failed to update role permissions');
 
       setRoles(roles.map(role =>
         role.id === roleId ? { ...role, permissions } : role
@@ -109,8 +112,11 @@ export default function RolesManagement() {
     if (!confirm('Are you sure you want to delete this role?')) return;
 
     try {
-      const roleRef = doc(db, 'roles', roleId);
-      await deleteDoc(roleRef);
+      const response = await fetch(`/api/admin/roles/${roleId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) throw new Error('Failed to delete role');
 
       setRoles(roles.filter(role => role.id !== roleId));
       toast.success('Role deleted successfully');
@@ -265,59 +271,94 @@ export default function RolesManagement() {
         </Card>
       )}
 
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left p-4">Name</th>
-                <th className="text-left p-4">Permissions</th>
-                <th className="text-left p-4">Created</th>
-                <th className="text-left p-4">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRoles.map((role) => (
-                <tr key={role.id} className="border-b">
-                  <td className="p-4">{role.name}</td>
-                  <td className="p-4">
-                    <div className="space-y-1">
-                      {Object.entries(role.permissions).map(([key, value]) => (
-                        <div key={key} className="flex items-center space-x-2">
-                          <Checkbox
-                            checked={value}
-                            onCheckedChange={(checked) =>
-                              handleUpdatePermissions(role.id, {
-                                ...role.permissions,
-                                [key]: checked as boolean,
-                              })
-                            }
-                          />
-                          <label className="text-sm">
-                            {key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="p-4">
-                    {new Date(role.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="p-4">
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteRole(role.id)}
-                    >
-                      Delete
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      <div className="grid gap-4">
+        {filteredRoles.map((role) => (
+          <Card key={role.id} className="p-4">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="font-semibold">{role.name}</h3>
+                <p className="text-sm text-muted-foreground">
+                  Created {new Date(role.createdAt).toLocaleDateString()}
+                </p>
+              </div>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => handleDeleteRole(role.id)}
+              >
+                Delete
+              </Button>
+            </div>
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id={`manage_users_${role.id}`}
+                  checked={role.permissions.manage_users}
+                  onCheckedChange={(checked) =>
+                    handleUpdatePermissions(role.id, {
+                      ...role.permissions,
+                      manage_users: checked as boolean,
+                    })
+                  }
+                />
+                <label htmlFor={`manage_users_${role.id}`}>Manage Users</label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id={`manage_courses_${role.id}`}
+                  checked={role.permissions.manage_courses}
+                  onCheckedChange={(checked) =>
+                    handleUpdatePermissions(role.id, {
+                      ...role.permissions,
+                      manage_courses: checked as boolean,
+                    })
+                  }
+                />
+                <label htmlFor={`manage_courses_${role.id}`}>Manage Courses</label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id={`manage_tools_${role.id}`}
+                  checked={role.permissions.manage_tools}
+                  onCheckedChange={(checked) =>
+                    handleUpdatePermissions(role.id, {
+                      ...role.permissions,
+                      manage_tools: checked as boolean,
+                    })
+                  }
+                />
+                <label htmlFor={`manage_tools_${role.id}`}>Manage Tools</label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id={`manage_roles_${role.id}`}
+                  checked={role.permissions.manage_roles}
+                  onCheckedChange={(checked) =>
+                    handleUpdatePermissions(role.id, {
+                      ...role.permissions,
+                      manage_roles: checked as boolean,
+                    })
+                  }
+                />
+                <label htmlFor={`manage_roles_${role.id}`}>Manage Roles</label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id={`view_analytics_${role.id}`}
+                  checked={role.permissions.view_analytics}
+                  onCheckedChange={(checked) =>
+                    handleUpdatePermissions(role.id, {
+                      ...role.permissions,
+                      view_analytics: checked as boolean,
+                    })
+                  }
+                />
+                <label htmlFor={`view_analytics_${role.id}`}>View Analytics</label>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 } 

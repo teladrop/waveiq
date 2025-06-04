@@ -1,8 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -29,33 +27,12 @@ export default function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
-      // Fetch total users
-      const usersRef = collection(db, 'users');
-      const usersSnapshot = await getDocs(usersRef);
-      const totalUsers = usersSnapshot.size;
-
-      // Fetch active subscriptions (users with non-free plans)
-      const activeSubscriptionsSnapshot = await getDocs(
-        query(usersRef, where('plan', '!=', 'free'))
-      );
-      const activeSubscriptions = activeSubscriptionsSnapshot.size;
-
-      // Fetch total courses
-      const coursesRef = collection(db, 'courses');
-      const coursesSnapshot = await getDocs(coursesRef);
-      const totalCourses = coursesSnapshot.size;
-
-      // Fetch total tools
-      const toolsRef = collection(db, 'tools');
-      const toolsSnapshot = await getDocs(toolsRef);
-      const totalTools = toolsSnapshot.size;
-
-      setStats({
-        totalUsers,
-        activeSubscriptions,
-        totalCourses,
-        totalTools,
-      });
+      const response = await fetch('/api/admin/stats');
+      if (!response.ok) {
+        throw new Error('Failed to fetch stats');
+      }
+      const data = await response.json();
+      setStats(data);
     } catch (error) {
       console.error('Error fetching stats:', error);
       toast.error('Failed to fetch dashboard stats');

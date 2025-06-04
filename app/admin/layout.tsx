@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth } from '@/lib/firebase';
-import { getAdmin } from '@/lib/db';
+import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,38 +14,18 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { data: session, status } = useSession();
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkAdminAuth();
-  }, []);
-
-  const checkAdminAuth = async () => {
-    try {
-      const user = auth.currentUser;
-      if (!user) {
-        router.push('/admin/login');
-        return;
-      }
-
-      const admin = await getAdmin(user.uid);
-      if (!admin) {
-        toast.error('Unauthorized access');
-        router.push('/admin/login');
-        return;
-      }
-
-      setIsAdmin(true);
-    } catch (error) {
-      console.error('Auth error:', error);
+    if (status === 'unauthenticated') {
       router.push('/admin/login');
-    } finally {
+    } else if (status === 'authenticated') {
       setLoading(false);
     }
-  };
+  }, [status, router]);
 
-  if (loading) {
+  if (loading || status === 'loading') {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -54,7 +33,7 @@ export default function AdminLayout({
     );
   }
 
-  if (!isAdmin) {
+  if (!session) {
     return null;
   }
 

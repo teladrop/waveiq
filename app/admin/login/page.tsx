@@ -2,9 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { getAdmin } from '@/lib/db';
+import { signIn } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -23,16 +21,13 @@ export default function AdminLogin() {
     setLoading(true);
 
     try {
-      // Sign in with Firebase
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        credentials.email,
-        credentials.password
-      );
+      const result = await signIn('credentials', {
+        email: credentials.email,
+        password: credentials.password,
+        redirect: false
+      });
 
-      // Check if user is an admin
-      const admin = await getAdmin(userCredential.user.uid);
-      if (!admin) {
+      if (result?.error) {
         toast.error('Invalid credentials');
         return;
       }

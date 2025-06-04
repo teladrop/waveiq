@@ -3,22 +3,29 @@ import { signUp } from '@/lib/auth';
 
 export async function POST(request: Request) {
   try {
-    const { email, password, fullName } = await request.json();
+    const { email, password, name } = await request.json();
 
-    if (!email || !password || !fullName) {
+    if (!email || !password) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    const data = await signUp(email, password, fullName);
+    const user = await signUp(email, password, name);
 
-    return NextResponse.json(data);
+    return NextResponse.json({
+      success: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name
+      }
+    });
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message },
-      { status: 500 }
+      { status: error.message === 'User already exists' ? 409 : 500 }
     );
   }
 } 
