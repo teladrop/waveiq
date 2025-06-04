@@ -1,0 +1,8 @@
+{
+  "projects": {
+    "default": "waveiqapp",
+    "staging": "waveiqapp"
+  },
+  "targets": {},
+  "etags": {}
+}

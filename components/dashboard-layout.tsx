@@ -1,18 +1,9 @@
 "use client"
 
-import type React from "react"
-
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { ThemeToggle } from "@/components/theme-toggle"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import * as React from "react"
+import { useState } from "react"
+import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
 import {
   Home,
   Search,
@@ -28,11 +19,26 @@ import {
   GraduationCap,
   ImageIcon,
 } from "lucide-react"
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
-import { useState } from "react"
 
-const navigation = [
+import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { ThemeToggle } from "@/components/theme-toggle"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+
+interface NavigationItem {
+  name: string
+  href: string
+  icon: React.ElementType
+}
+
+const navigation: NavigationItem[] = [
   { name: "Dashboard", href: "/dashboard", icon: Home },
   { name: "Keyword Finder", href: "/keyword-finder", icon: Search },
   { name: "AI Generator", href: "/ai-generator", icon: Zap },
@@ -44,11 +50,16 @@ const navigation = [
   { name: "Affiliate Program", href: "/affiliate", icon: DollarSign },
 ]
 
+interface User {
+  fullName: string
+  email?: string
+}
+
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
-  const user =
+  const user: User =
     typeof window !== "undefined"
       ? JSON.parse(localStorage.getItem("user") || '{"fullName": "Creator"}')
       : { fullName: "Creator" }

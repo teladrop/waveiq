@@ -1,11 +1,15 @@
 "use client"
 
+import { useEffect, useState } from 'react';
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Search, Zap, Target, BarChart3, TrendingUp, Clock, Eye } from "lucide-react"
+import { Search, Zap, Target, BarChart3, TrendingUp, Clock, Eye, Video, Users, Upload } from "lucide-react"
 import Link from "next/link"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
+import { Activity, TrendingTopic, UserStats, getRecentActivities, getTrendingTopics, getUserStats, formatNumber, formatTimeAgo } from '@/lib/data-service';
+import { auth } from '@/lib/firebase';
+import { useRouter } from 'next/navigation';
 
 const trendData = [
   { name: "Jan", keywords: 12 },
@@ -83,39 +87,76 @@ const trendingTopics = [
 ]
 
 export default function DashboardPage() {
-  const user =
-    typeof window !== "undefined"
-      ? JSON.parse(localStorage.getItem("user") || '{"fullName": "Creator"}')
-      : { fullName: "Creator" }
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [trendingTopics, setTrendingTopics] = useState<TrendingTopic[]>([]);
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
-  const getActivityIcon = (type: string) => {
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const user = auth.currentUser;
+        if (!user) {
+          router.push('/login');
+          return;
+        }
+
+        const [activitiesData, topicsData, statsData] = await Promise.all([
+          getRecentActivities(user.uid),
+          getTrendingTopics(),
+          getUserStats(user.uid)
+        ]);
+
+        setActivities(activitiesData);
+        setTrendingTopics(topicsData);
+        setUserStats(statsData);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [router]);
+
+  const getActivityIcon = (type: Activity['type']) => {
     switch (type) {
-      case "ai-generation":
-        return <Zap className="h-4 w-4 text-primary" />
-      case "keyword-search":
-        return <Search className="h-4 w-4 text-primary" />
-      case "shorts-creation":
-        return <BarChart3 className="h-4 w-4 text-primary" />
-      case "competitor-analysis":
-        return <Target className="h-4 w-4 text-primary" />
-      case "upload-optimization":
-        return <Clock className="h-4 w-4 text-primary" />
+      case 'ai-generation':
+        return <Video className="h-4 w-4" />;
+      case 'keyword-search':
+        return <Search className="h-4 w-4" />;
+      case 'shorts-creation':
+        return <Video className="h-4 w-4" />;
+      case 'competitor-analysis':
+        return <Users className="h-4 w-4" />;
+      case 'upload-optimization':
+        return <Upload className="h-4 w-4" />;
       default:
-        return <Eye className="h-4 w-4 text-gray-400" />
+        return <Video className="h-4 w-4" />;
     }
-  }
+  };
 
-  const getDifficultyColor = (difficulty: string) => {
+  const getDifficultyColor = (difficulty: TrendingTopic['difficulty']) => {
     switch (difficulty) {
-      case "Low":
-        return "bg-green-500/20 text-green-400 border-green-500/30"
-      case "Medium":
-        return "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-      case "High":
-        return "bg-red-500/20 text-red-400 border-red-500/30"
+      case 'Low':
+        return 'text-green-500';
+      case 'Medium':
+        return 'text-yellow-500';
+      case 'High':
+        return 'text-red-500';
       default:
-        return "bg-gray-500/20 text-gray-400 border-gray-500/30"
+        return 'text-gray-500';
     }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>
+    );
   }
 
   return (
@@ -123,7 +164,9 @@ export default function DashboardPage() {
       <div className="space-y-8">
         {/* Welcome Section */}
         <div>
-          <h1 className="text-3xl font-bold text-white">Welcome back, {user.fullName.split(" ")[0]}! 👋</h1>
+          <h1 className="text-3xl font-bold text-white">
+            Welcome back, {userStats?.fullName ? userStats.fullName.split(" ")[0] : 'Creator'}! 👋
+          </h1>
           <p className="text-gray-300 mt-2">Ready to optimize your YouTube content today?</p>
         </div>
 
@@ -202,30 +245,27 @@ export default function DashboardPage() {
               <Search className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">1,247</div>
-              <p className="text-xs text-green-400">+12% from last month</p>
+              <div className="text-2xl font-bold text-white">{formatNumber(userStats?.totalKeywords || 0)}</div>
             </CardContent>
           </Card>
 
           <Card className="bg-card border-gray-800">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-white">Titles Saved</CardTitle>
-              <Zap className="h-4 w-4 text-primary" />
+              <CardTitle className="text-sm font-medium text-white">Total Videos</CardTitle>
+              <Video className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">89</div>
-              <p className="text-xs text-green-400">+23% from last month</p>
+              <div className="text-2xl font-bold text-white">{formatNumber(userStats?.totalVideos || 0)}</div>
             </CardContent>
           </Card>
 
           <Card className="bg-card border-gray-800">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-white">Shorts Created</CardTitle>
+              <CardTitle className="text-sm font-medium text-white">Total Views</CardTitle>
               <BarChart3 className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-white">34</div>
-              <p className="text-xs text-green-400">+8% from last month</p>
+              <div className="text-2xl font-bold text-white">{formatNumber(userStats?.totalViews || 0)}</div>
             </CardContent>
           </Card>
         </div>
@@ -268,13 +308,17 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {recentActivities.map((activity, index) => (
-                  <div key={index} className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 mt-1">{getActivityIcon(activity.type)}</div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white">{activity.action}</p>
-                      <p className="text-xs text-gray-400 truncate">{activity.description}</p>
-                      <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
+                {activities.map((activity) => (
+                  <div key={activity.id} className="flex items-center space-x-4">
+                    <div className="p-2 bg-muted rounded-full">
+                      {getActivityIcon(activity.type)}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">{activity.action}</p>
+                      <p className="text-sm text-muted-foreground">{activity.description}</p>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {formatTimeAgo(activity.timestamp)}
                     </div>
                   </div>
                 ))}
@@ -293,17 +337,17 @@ export default function DashboardPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {trendingTopics.map((topic, index) => (
-                  <div key={index} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-sm font-medium text-white">{topic.topic}</h4>
-                      <span className="text-xs text-green-400 font-semibold">{topic.growth}</span>
+                {trendingTopics.map((topic) => (
+                  <div key={topic.id} className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">{topic.topic}</p>
+                      <p className="text-sm text-muted-foreground">{topic.category}</p>
                     </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-400">{topic.searches} searches</span>
-                      <Badge className={getDifficultyColor(topic.difficulty)} variant="outline">
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-green-500">+{topic.growth}%</p>
+                      <p className={`text-sm ${getDifficultyColor(topic.difficulty)}`}>
                         {topic.difficulty}
-                      </Badge>
+                      </p>
                     </div>
                   </div>
                 ))}
