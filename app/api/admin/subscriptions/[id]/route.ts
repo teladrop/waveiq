@@ -1,24 +1,23 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
+import { getCurrentUser } from '@/lib/auth';
 
 export async function PATCH(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    const user = await getCurrentUser();
+    if (!user?.email) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+    const adminUser = await prisma.user.findUnique({
+      where: { email: user.email },
       select: { role: true }
     });
 
-    if (user?.role !== 'admin') {
+    if (adminUser?.role !== 'admin') {
       return new NextResponse('Forbidden', { status: 403 });
     }
 
@@ -50,17 +49,17 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    const user = await getCurrentUser();
+    if (!user?.email) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+    const adminUser = await prisma.user.findUnique({
+      where: { email: user.email },
       select: { role: true }
     });
 
-    if (user?.role !== 'admin') {
+    if (adminUser?.role !== 'admin') {
       return new NextResponse('Forbidden', { status: 403 });
     }
 
