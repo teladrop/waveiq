@@ -1,34 +1,46 @@
 import { NextResponse } from 'next/server';
-import { getDocuments } from '@/lib/db';
+import { prisma } from '@/lib/db';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth-options';
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    // Get all users
-    const users = await getDocuments('users');
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
 
-    // Get all keywords
-    const keywords = await getDocuments('keywords');
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { role: true }
+    });
 
-    // Get all content generations
-    const contentGen = await getDocuments('content_gen');
+    if (user?.role !== 'admin') {
+      return new NextResponse('Forbidden', { status: 403 });
+    }
 
-    // Get all courses
-    const courses = await getDocuments('courses');
+    // Get total users
+    const totalUsers = await prisma.user.count();
 
-    // Get all affiliate links
-    const affiliateLinks = await getDocuments('affiliate_links');
+    // Get total courses
+    const totalCourses = await prisma.course.count();
+
+    // Get total subscriptions
+    const totalSubscriptions = await prisma.subscription.count({
+      where: { status: 'active' }
+    });
+
+    // Get total tools
+    const totalTools = await prisma.tool.count();
 
     return NextResponse.json({
-      users,
-      keywords,
-      contentGen,
-      courses,
-      affiliateLinks,
+      totalUsers,
+      totalCourses,
+      totalSubscriptions,
+      totalTools
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 500 }
-    );
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
   }
 } 
