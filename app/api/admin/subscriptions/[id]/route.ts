@@ -14,18 +14,18 @@ export async function PATCH(
 
     const adminUser = await prisma.user.findUnique({
       where: { email: user.email },
-      select: { role: true }
+      include: { role: true }
     });
 
-    if (adminUser?.role !== 'admin') {
+    if (!adminUser?.role || adminUser.role.name !== 'ADMIN') {
       return new NextResponse('Forbidden', { status: 403 });
     }
 
     const body = await request.json();
     const { plan, status, endDate } = body;
 
-    if (!plan || !status || !['active', 'cancelled', 'expired'].includes(status)) {
-      return new NextResponse('Invalid subscription data', { status: 400 });
+    if (!plan || !status || !endDate) {
+      return new NextResponse('Missing required fields', { status: 400 });
     }
 
     const subscription = await prisma.subscription.update({
@@ -33,7 +33,7 @@ export async function PATCH(
       data: {
         plan,
         status,
-        ...(endDate && { endDate: new Date(endDate) })
+        endDate: new Date(endDate)
       }
     });
 
@@ -56,10 +56,10 @@ export async function DELETE(
 
     const adminUser = await prisma.user.findUnique({
       where: { email: user.email },
-      select: { role: true }
+      include: { role: true }
     });
 
-    if (adminUser?.role !== 'admin') {
+    if (!adminUser?.role || adminUser.role.name !== 'ADMIN') {
       return new NextResponse('Forbidden', { status: 403 });
     }
 
