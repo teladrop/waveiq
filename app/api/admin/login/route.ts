@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { adminSignIn } from '@/lib/auth';
+import { adminSignIn } from '@/lib/auth-server';
 
 export async function POST(request: Request) {
   try {
