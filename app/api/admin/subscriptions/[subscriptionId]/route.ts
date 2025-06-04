@@ -4,7 +4,7 @@ import { getCurrentUser } from '@/lib/auth';
 
 interface RouteParams {
   params: {
-    roleId: string;
+    subscriptionId: string;
   };
 }
 
@@ -15,27 +15,35 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const { roleId } = params;
+    const { subscriptionId } = params;
     const body = await request.json();
-    const { permissions } = body;
+    const { status } = body;
 
-    if (!permissions) {
+    if (!status) {
       return new NextResponse('Missing required fields', { status: 400 });
     }
 
-    const role = await prisma.role.update({
+    const subscription = await prisma.subscription.update({
       where: {
-        id: roleId,
+        id: subscriptionId,
       },
       data: {
-        permissions: JSON.stringify(permissions),
+        status,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
       },
     });
 
-    // Parse permissions string to object
-    return NextResponse.json({ ...role, permissions });
+    return NextResponse.json(subscription);
   } catch (error) {
-    console.error('Error updating role:', error);
+    console.error('Error updating subscription:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }
@@ -47,17 +55,17 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const { roleId } = params;
+    const { subscriptionId } = params;
 
-    await prisma.role.delete({
+    await prisma.subscription.delete({
       where: {
-        id: roleId,
+        id: subscriptionId,
       },
     });
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
-    console.error('Error deleting role:', error);
+    console.error('Error deleting subscription:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 } 

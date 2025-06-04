@@ -1,178 +1,145 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { getAuth } from 'firebase/auth';
-import { collection, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
 interface User {
   id: string;
-  full_name: string;
   email: string;
-  plan: string;
-  date_joined: string;
+  role: string;
+  subscription: {
+    status: string;
+    plan: string;
+  } | null;
 }
 
-export default function UsersManagement() {
+export default function AdminUsersPage() {
+  const { user, loading } = useAuth();
+  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingUsers, setLoadingUsers] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedPlan, setSelectedPlan] = useState<string>('all');
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
-    try {
-      const usersRef = collection(db, 'users');
-      const q = query(usersRef, orderBy('date_joined', 'desc'));
-      const querySnapshot = await getDocs(q);
-      
-      const usersData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as User[];
-
-      setUsers(usersData);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      toast.error('Failed to fetch users');
-    } finally {
-      setLoading(false);
+    if (!loading && !user) {
+      router.push('/login');
     }
-  };
+  }, [user, loading, router]);
 
-  const handleUpdatePlan = async (userId: string, newPlan: string) => {
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch('/api/admin/users');
+        if (!response.ok) throw new Error('Failed to fetch users');
+        const data = await response.json();
+        setUsers(data);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        toast.error('Failed to load users');
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+
+    if (user) {
+      fetchUsers();
+    }
+  }, [user]);
+
+  const handleUpdateRole = async (userId: string, role: string) => {
     try {
-      const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, { plan: newPlan });
+      const response = await fetch(`/api/admin/users/${userId}/role`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
+      });
+
+      if (!response.ok) throw new Error('Failed to update role');
 
       setUsers(users.map(user => 
-        user.id === userId ? { ...user, plan: newPlan } : user
+        user.id === userId ? { ...user, role } : user
       ));
-      toast.success('User plan updated successfully');
+
+      toast.success('User role updated successfully');
     } catch (error) {
-      console.error('Error updating user plan:', error);
-      toast.error('Failed to update user plan');
+      console.error('Error updating user role:', error);
+      toast.error('Failed to update user role');
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
+  const filteredUsers = users.filter(user =>
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-    try {
-      const userRef = doc(db, 'users', userId);
-      await deleteDoc(userRef);
+  if (loading || loadingUsers) {
+    return <div>Loading...</div>;
+  }
 
-      setUsers(users.filter(user => user.id !== userId));
-      toast.success('User deleted successfully');
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      toast.error('Failed to delete user');
-    }
-  };
-
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPlan = selectedPlan === 'all' || user.plan === selectedPlan;
-    return matchesSearch && matchesPlan;
-  });
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+  if (!user) {
+    return null;
   }
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">Users Management</h1>
-        <p className="text-muted-foreground">Manage your users and their subscriptions</p>
-      </div>
-
-      <div className="flex gap-4">
+    <div className="container mx-auto py-8">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">User Management</h1>
         <Input
           placeholder="Search users..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="max-w-sm"
         />
-        <Select
-          value={selectedPlan}
-          onValueChange={setSelectedPlan}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter by plan" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Plans</SelectItem>
-            <SelectItem value="free">Free</SelectItem>
-            <SelectItem value="pro">Pro</SelectItem>
-            <SelectItem value="enterprise">Enterprise</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left p-4">Name</th>
-                <th className="text-left p-4">Email</th>
-                <th className="text-left p-4">Plan</th>
-                <th className="text-left p-4">Joined</th>
-                <th className="text-left p-4">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map((user) => (
-                <tr key={user.id} className="border-b">
-                  <td className="p-4">{user.full_name}</td>
-                  <td className="p-4">{user.email}</td>
-                  <td className="p-4">
-                    <Select
-                      value={user.plan}
-                      onValueChange={(value) => handleUpdatePlan(user.id, value)}
-                    >
-                      <SelectTrigger className="w-[120px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="free">Free</SelectItem>
-                        <SelectItem value="pro">Pro</SelectItem>
-                        <SelectItem value="enterprise">Enterprise</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </td>
-                  <td className="p-4">
-                    {new Date(user.date_joined).toLocaleDateString()}
-                  </td>
-                  <td className="p-4">
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteUser(user.id)}
-                    >
-                      Delete
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      <div className="grid gap-6">
+        {filteredUsers.map((user) => (
+          <Card key={user.id}>
+            <CardHeader>
+              <CardTitle>{user.email}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Role</Label>
+                  <Select
+                    value={user.role}
+                    onValueChange={(value) => handleUpdateRole(user.id, value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="user">User</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Subscription</Label>
+                  <div className="text-sm text-gray-600">
+                    {user.subscription ? (
+                      <>
+                        <p>Status: {user.subscription.status}</p>
+                        <p>Plan: {user.subscription.plan}</p>
+                      </>
+                    ) : (
+                      <p>No active subscription</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 } 

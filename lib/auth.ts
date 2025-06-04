@@ -1,6 +1,8 @@
 import { prisma } from '@/lib/db';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth-options';
+import { useSession } from 'next-auth/react';
+import { useEffect, useState } from 'react';
 
 export interface User {
   id: string;
@@ -8,6 +10,36 @@ export interface User {
   name: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export function useAuth() {
+  const { data: session, status } = useSession();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (session?.user?.email) {
+        try {
+          const response = await fetch('/api/auth/user');
+          if (response.ok) {
+            const userData = await response.json();
+            setUser(userData);
+          }
+        } catch (error) {
+          console.error('Error fetching user:', error);
+        }
+      }
+      setLoading(false);
+    };
+
+    fetchUser();
+  }, [session]);
+
+  return {
+    user,
+    loading: loading || status === 'loading',
+  };
 }
 
 export async function signIn(email: string, password: string) {

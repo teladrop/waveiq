@@ -15,7 +15,13 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json(roles);
+    // Parse permissions string to object
+    const rolesWithParsedPermissions = roles.map(role => ({
+      ...role,
+      permissions: JSON.parse(role.permissions),
+    }));
+
+    return NextResponse.json(rolesWithParsedPermissions);
   } catch (error) {
     console.error('Error fetching roles:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
@@ -39,11 +45,12 @@ export async function POST(request: Request) {
     const role = await prisma.role.create({
       data: {
         name,
-        permissions,
+        permissions: JSON.stringify(permissions),
       },
     });
 
-    return NextResponse.json(role);
+    // Parse permissions string to object
+    return NextResponse.json({ ...role, permissions });
   } catch (error) {
     console.error('Error creating role:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
