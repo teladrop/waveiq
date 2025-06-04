@@ -1,6 +1,4 @@
-import { db } from './firebase';
-import { collection, query, where, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
-import { auth } from './firebase';
+import { prisma } from './db';
 
 // Types
 export interface Activity {
@@ -34,20 +32,13 @@ export interface UserStats {
 // Activity Functions
 export async function getRecentActivities(userId: string, limitCount: number = 5): Promise<Activity[]> {
   try {
-    const activitiesRef = collection(db, 'activities');
-    const q = query(
-      activitiesRef,
-      where('userId', '==', userId),
-      orderBy('timestamp', 'desc'),
-      limit(limitCount)
-    );
-    
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      timestamp: doc.data().timestamp.toDate(),
-    })) as Activity[];
+    const activities = await prisma.activity.findMany({
+      where: { userId },
+      orderBy: { timestamp: 'desc' },
+      take: limitCount
+    });
+
+    return activities;
   } catch (error) {
     console.error('Error fetching activities:', error);
     return [];
@@ -57,28 +48,13 @@ export async function getRecentActivities(userId: string, limitCount: number = 5
 // Trending Topics Functions
 export async function getTrendingTopics(category?: string): Promise<TrendingTopic[]> {
   try {
-    const topicsRef = collection(db, 'trending_topics');
-    let q = query(
-      topicsRef,
-      orderBy('searches', 'desc'),
-      limit(5)
-    );
-    
-    if (category) {
-      q = query(
-        topicsRef,
-        where('category', '==', category),
-        orderBy('searches', 'desc'),
-        limit(5)
-      );
-    }
-    
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      lastUpdated: doc.data().lastUpdated.toDate(),
-    })) as TrendingTopic[];
+    const topics = await prisma.trendingTopic.findMany({
+      where: category ? { category } : undefined,
+      orderBy: { searches: 'desc' },
+      take: 5
+    });
+
+    return topics;
   } catch (error) {
     console.error('Error fetching trending topics:', error);
     return [];
@@ -88,21 +64,11 @@ export async function getTrendingTopics(category?: string): Promise<TrendingTopi
 // User Stats Functions
 export async function getUserStats(userId: string): Promise<UserStats | null> {
   try {
-    const statsRef = collection(db, 'user_stats');
-    const q = query(
-      statsRef,
-      where('userId', '==', userId),
-      limit(1)
-    );
-    
-    const snapshot = await getDocs(q);
-    if (snapshot.empty) return null;
-    
-    const data = snapshot.docs[0].data();
-    return {
-      ...data,
-      lastUpdated: data.lastUpdated.toDate(),
-    } as UserStats;
+    const stats = await prisma.userStats.findUnique({
+      where: { userId }
+    });
+
+    return stats;
   } catch (error) {
     console.error('Error fetching user stats:', error);
     return null;
