@@ -1,24 +1,23 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth-options';
+import { getCurrentUser } from '@/lib/auth-server';
 
 export async function PATCH(
   request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
+    const user = await getCurrentUser();
+    if (!user?.email) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const admin = await prisma.user.findUnique({
-      where: { email: session.user.email },
+    const adminUser = await prisma.user.findUnique({
+      where: { email: user.email },
       select: { role: true }
     });
 
-    if (admin?.role !== 'admin') {
+    if (adminUser?.role !== 'admin') {
       return new NextResponse('Forbidden', { status: 403 });
     }
 
@@ -29,12 +28,12 @@ export async function PATCH(
       return new NextResponse('Invalid role', { status: 400 });
     }
 
-    const user = await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id: params.id },
       data: { role }
     });
 
-    return NextResponse.json(user);
+    return NextResponse.json(updatedUser);
   } catch (error) {
     console.error('Error updating user role:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
