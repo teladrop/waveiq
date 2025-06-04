@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getChannelVideos } from '@/lib/youtube';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth-server';
 import { createCompetitor } from '@/lib/db';
 
 export async function POST(request: Request) {

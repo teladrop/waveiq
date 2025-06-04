@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { generateContent } from '@/lib/ai';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth-server';
 import { createContent } from '@/lib/db';
 
 export async function POST(request: Request) {

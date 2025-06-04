@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { generateThumbnail } from '@/lib/thumbnails';
 import { prisma } from '@/lib/db';
-import { getCurrentUser } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth-server';
 
 export async function POST(request: Request) {
   try {
